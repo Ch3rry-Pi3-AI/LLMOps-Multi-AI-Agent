@@ -4,86 +4,112 @@ ui.py
 
 Streamlit-based frontend interface for the **LLMOps Multi-AI Agent** project.
 
-This module provides a simple web UI that allows users to:
-
-* Select a Groq model
-* Define a system prompt
-* Enable or disable Tavily-powered web search
-* Enter a user query
-* Send the request to the FastAPI backend
-* Display the final AI response returned by the agent
-
-It acts as the visual interaction layer between the user and the Multi-AI
-Agent’s reasoning engine.
+Provides:
+* Role presets (e.g. medical / legal / journalist style)
+* Model selection
+* Optional web search
+* Query input and response display
 """
 
-# ======================================================================
-# Imports
-# ======================================================================
-
-# Streamlit UI framework
 import streamlit as st
-
-# HTTP client for communicating with the FastAPI backend
 import requests
 
-# Project configuration (list of allowed model names, environment variables)
 from app.config.settings import settings
-
-# Project-wide logging utility
 from app.common.logger import get_logger
-
-# Custom exception class for structured error reporting
 from app.common.custom_exception import CustomException
 
 
-# ======================================================================
-# Initialisation
-# ======================================================================
-
-# Create a logger specific to this module
 logger = get_logger(__name__)
 
-# Configure global Streamlit page settings
-st.set_page_config(page_title="Multi AI Agent", layout="centered")
-
-# Display main page title
-st.title("Multi AI Agent using Groq and Tavily")
-
+st.set_page_config(page_title="Multi AI Agent", layout="wide")
 
 # ======================================================================
-# User Input Controls
+# Role presets
 # ======================================================================
 
-# Text area for defining the agent's system-level instruction
-system_prompt = st.text_area("Define your AI Agent:", height=70)
+ROLE_PRESETS = {
+    "General Assistant": (
+        "You are a helpful, neutral AI assistant. "
+        "Answer clearly, concisely, and avoid speculation."
+    ),
+    "Medical Information (non-diagnostic)": (
+        "You are an AI that provides general, non-diagnostic medical information. "
+        "You are NOT a doctor and you do NOT give medical advice. "
+        "Always encourage users to consult a qualified healthcare professional "
+        "for diagnosis, treatment, or urgent concerns."
+    ),
+    "Legal Information (non-advisory)": (
+        "You are an AI that provides general legal information, not legal advice. "
+        "You are NOT a lawyer. Encourage users to consult a qualified legal "
+        "professional for advice specific to their situation."
+    ),
+    "Journalist / Analyst": (
+        "You are an analytical journalist. You explain issues clearly, lay out "
+        "multiple perspectives, avoid taking sides, and distinguish facts from opinion."
+    ),
+    "Technical Expert": (
+        "You are a highly skilled technical expert. Provide precise, step-by-step "
+        "explanations, include caveats where appropriate, and avoid hand-waving."
+    ),
+}
 
-# Dropdown to select one of the allowed Groq models
-selected_model = st.selectbox("Select your AI model:", settings.ALLOWED_MODEL_NAMES)
-
-# Checkbox to enable/disable Tavily-powered web search
-allow_web_search = st.checkbox("Allow web search")
-
-# Text area where the user enters their query
-user_query = st.text_area("Enter your query:", height=150)
-
-
-# ======================================================================
-# Backend API Configuration
-# ======================================================================
-
-# URL of the backend FastAPI `/chat` endpoint
 API_URL = "http://127.0.0.1:9999/chat"
 
+# ======================================================================
+# Layout: sidebar for config, main for chat
+# ======================================================================
+
+st.title("Multi AI Agent")
+
+with st.sidebar:
+    st.header("⚙️ Agent Configuration")
+
+    # Role selection
+    selected_role = st.selectbox(
+        "Select agent role:",
+        list(ROLE_PRESETS.keys()),
+        index=0,
+    )
+
+    # Model selection
+    selected_model = st.selectbox(
+        "Select your AI model:",
+        settings.ALLOWED_MODEL_NAMES,
+    )
+
+    # Web search toggle
+    allow_web_search = st.checkbox("Allow web search", value=False)
+
+    st.markdown("---")
+    st.caption("You can edit the system prompt below in the main panel.")
 
 # ======================================================================
-# Submit Button Logic
+# Main panel: system prompt, query, response
 # ======================================================================
 
-# When the "Ask Agent" button is clicked and the query is not empty
-if st.button("Ask Agent") and user_query.strip():
+# Prefill system prompt from role preset, but allow editing
+default_prompt = ROLE_PRESETS.get(selected_role, ROLE_PRESETS["General Assistant"])
+system_prompt = st.text_area(
+    "System prompt (agent instructions):",
+    value=default_prompt,
+    height=120,
+)
 
-    # Prepare payload for backend API
+user_query = st.text_area("Enter your query:", height=160)
+
+col1, col2 = st.columns([1, 3])
+
+with col1:
+    ask_button = st.button("Ask Agent")
+
+with col2:
+    st.write("")  # small spacer
+
+# ======================================================================
+# Handle submission
+# ======================================================================
+
+if ask_button and user_query.strip():
     payload = {
         "model_name": selected_model,
         "system_prompt": system_prompt,
@@ -92,36 +118,24 @@ if st.button("Ask Agent") and user_query.strip():
     }
 
     try:
-        # Log outgoing request to backend
         logger.info("Sending request to backend")
 
-        # Make POST request to backend API
-        response = requests.post(API_URL, json=payload)
+        with st.spinner("Thinking..."):
+            response = requests.post(API_URL, json=payload)
 
-        # --------------------------------------------------------------
-        # Successful Response
-        # --------------------------------------------------------------
         if response.status_code == 200:
-
-            # Extract agent's generated response
             agent_response = response.json().get("response", "")
-
             logger.info("Successfully received response from backend")
 
-            # Display the agent's final answer
             st.subheader("Agent Response")
             st.markdown(agent_response.replace("\n", "<br>"), unsafe_allow_html=True)
 
-        # --------------------------------------------------------------
-        # Backend Returned Error
-        # --------------------------------------------------------------
         else:
-            logger.error("Backend error encountered")
-            st.error("Error communicating with backend")
+            logger.error(f"Backend error. Status code: {response.status_code}")
+            st.error("Error communicating with backend. Please check the logs.")
 
-    # --------------------------------------------------------------
-    # Network/Unexpected Error
-    # --------------------------------------------------------------
     except Exception as e:
         logger.error("Error occurred while sending request to backend")
         st.error(str(CustomException("Failed to communicate to backend", error_detail=e)))
+elif ask_button and not user_query.strip():
+    st.warning("Please enter a query before asking the agent.")
