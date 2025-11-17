@@ -3,7 +3,18 @@
 This branch introduces the unified application launcher for the Multi-AI Agent system.
 The new file **`app/main.py`** starts both the FastAPI backend and the Streamlit frontend, enabling the entire system to run from a single entry point.
 
-This simplifies development, testing, and usage by ensuring both services are brought online automatically and consistently.
+<p align="center">
+  <img src="img/streamlit/streamlit_app.gif" alt="Streamlit Application Demonstration" width="100%">
+</p>
+
+The GIF above demonstrates the enhanced Streamlit interface introduced in this stage, including:
+
+* Role selection via dropdown menus
+* Model selection
+* Optional internet-enabled responses via Tavily web search
+* Clean, responsive UI flow
+
+This streamlined launcher simplifies development, testing, and usage by ensuring both services are brought online automatically and consistently.
 
 ## 🗂️ **Project Structure**
 
@@ -42,8 +53,6 @@ This module provides a fully integrated start-up routine for the Multi-AI Agent.
 * Environment variable loading via `load_dotenv`
 * A single execution point for running the entire application
 
-This design ensures that both components (backend + frontend) start in the correct order and operate concurrently without requiring two separate terminal sessions.
-
 ## 🎯 **Purpose of This Branch**
 
 To consolidate application start-up into one central location, enabling:
@@ -64,3 +73,21 @@ This branch adds the project’s unified launcher:
 * Simplifies usage and development of the Multi-AI Agent
 
 The system can now be launched cleanly from a single file, making it easier to run and test the entire project end-to-end.
+
+## ▶️ **How to Run the Application**
+
+Make sure your virtual environment is activated and your `.env` file contains valid API keys.
+
+Then simply run:
+
+```bash
+python app/main.py
+```
+
+This will automatically:
+
+* Start the FastAPI backend on port **9999**
+* Start the Streamlit frontend on port **8501**
+* Open the user interface in your browser
+
+You're ready to interact with your Multi-AI Agent.
