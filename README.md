@@ -1,9 +1,9 @@
-# 🧠 **AI Agent Construction — LLMOps Multi-AI Agent**
+# 🖥️ **Backend API Layer — LLMOps Multi-AI Agent**
 
-This branch introduces the first core reasoning module for the Multi-AI Agent system:
-**`app/core/ai_agent.py`**.
+This branch introduces the backend API layer for the Multi-AI Agent system, implemented through FastAPI.
+The new file **`app/backend/api.py`** provides a clean HTTP interface that external clients can use to interact with the LangGraph-powered agent.
 
-This file implements the LangGraph-powered ReAct agent used to generate intelligent responses, with optional Tavily search integration and Groq LLM support.
+It acts as the bridge between the system’s core reasoning logic and any frontend, UI, or external service that needs to query the agent.
 
 ## 🗂️ **Project Structure**
 
@@ -23,36 +23,45 @@ LLMOPS-MULTI-AI-AGENT/
 └── app/
     ├── main.py
     ├── backend/
+    │   └── api.py                      # NEW: FastAPI backend for agent interaction
     ├── common/
     ├── config/
     ├── core/
-    │   └── ai_agent.py                  # NEW: LangGraph ReAct agent implementation
     └── frontend/
 ```
 
 ## 🧩 **What Was Added in This Branch**
 
-### ✔️ `app/core/ai_agent.py`
+### ✔️ `app/backend/api.py`
 
-This module provides:
+This module provides the project’s first HTTP-facing interface. It includes:
 
-* Initialisation of the selected Groq model
-* Optional TavilySearch tool support
-* Construction of a LangGraph-backed ReAct agent via `create_agent`
-* Execution of the reasoning loop
-* Extraction of the final AI-generated message
+* A `/chat` POST endpoint
+* Request validation using a Pydantic model (`RequestState`)
+* Model-name validation against `settings.ALLOWED_MODEL_NAMES`
+* Invocation of the core agent (`get_response_from_ai_agents`)
+* Logging of requests, responses, and warnings
+* Structured error handling using FastAPI + `CustomException`
 
-This is the first functional component of the project’s reasoning layer.
+The backend is lightweight, fast, and cleanly integrated with the rest of the project.
 
 ## 🎯 **Purpose of This Branch**
 
-To introduce the system’s core AI agent logic and establish the foundation for future multi-agent workflows, orchestration modules, and tool integrations.
+To introduce a stable, well-structured API layer enabling:
+
+* External applications to interact with the agent
+* Clean separation between backend logic and core agent reasoning
+* A standardised JSON request/response workflow
+* Proper logging and error handling for production use
+
+This backend will support future branches such as frontend development, multi-agent routing, authentication, or deployment layers.
 
 ## ✅ **Summary**
 
-This branch adds the project’s first operational agent module, enabling:
+This branch adds the project’s first backend API component:
 
-* LangGraph-based reasoning
-* Groq LLM integration
-* Optional real-time web search
-* Clean, documented architecture ready for expansion
+* FastAPI-based HTTP interface
+* Input validation and structured error reporting
+* Seamless connection to the LangGraph-based core agent
+
+The Multi-AI Agent can now be queried programmatically through a clean, documented API endpoint.
