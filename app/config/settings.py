@@ -66,7 +66,7 @@ class Settings:
 
     # Define the list of safe model names available to the system
     ALLOWED_MODEL_NAMES = [
-        "llama3-70b-8192",
+        "llama-3.1-8b-instant",
         "llama-3.3-70b-versatile"
     ]
 
