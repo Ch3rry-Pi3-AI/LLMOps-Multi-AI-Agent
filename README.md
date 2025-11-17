@@ -1,9 +1,9 @@
-# 🎨 **Frontend UI Layer — LLMOps Multi-AI Agent**
+# 🚀 **Application Launcher — LLMOps Multi-AI Agent**
 
-This branch introduces the first frontend interface for the Multi-AI Agent system.
-The new file **`app/frontend/ui.py`** provides a Streamlit-based user interface that allows users to interact directly with the FastAPI backend and, through it, the LangGraph-powered agent.
+This branch introduces the unified application launcher for the Multi-AI Agent system.
+The new file **`app/main.py`** starts both the FastAPI backend and the Streamlit frontend, enabling the entire system to run from a single entry point.
 
-This frontend acts as the system’s visual interaction layer and offers an accessible way to test, query, and evaluate the agent’s reasoning capabilities.
+This simplifies development, testing, and usage by ensuring both services are brought online automatically and consistently.
 
 ## 🗂️ **Project Structure**
 
@@ -21,48 +21,46 @@ LLMOPS-MULTI-AI-AGENT/
 ├── uv.lock
 │
 └── app/
-    ├── main.py
+    ├── main.py                          # NEW: Unified launcher for backend + frontend
     ├── backend/
     ├── common/
     ├── config/
     ├── core/
     └── frontend/
-        └── ui.py                       # NEW: Streamlit interface for agent interaction
 ```
 
 ## 🧩 **What Was Added in This Branch**
 
-### ✔️ `app/frontend/ui.py`
+### ✔️ `app/main.py`
 
-This module introduces the project’s first graphical interface. It provides:
+This module provides a fully integrated start-up routine for the Multi-AI Agent. It includes:
 
-* A Streamlit layout for defining a system prompt
-* A dropdown for selecting supported Groq models
-* A toggle for enabling Tavily-powered web search
-* A text area for the user’s query
-* A button to send structured requests to the FastAPI `/chat` endpoint
-* Rendering of the agent’s final response
-* Logging of frontend → backend communication events
+* A threaded launcher for the FastAPI backend
+* A Streamlit launcher for the frontend UI
+* Logging for start-up events and failures
+* Structured exception handling via `CustomException`
+* Environment variable loading via `load_dotenv`
+* A single execution point for running the entire application
 
-This file enables hands-on interaction with the agent without requiring command-line tools or manual API calls.
+This design ensures that both components (backend + frontend) start in the correct order and operate concurrently without requiring two separate terminal sessions.
 
 ## 🎯 **Purpose of This Branch**
 
-To introduce a simple yet functional frontend layer that:
+To consolidate application start-up into one central location, enabling:
 
-* Makes the agent accessible through a graphical UI
-* Bridges user input with backend logic
-* Provides real-time feedback via a clean and minimal interface
-* Supports debugging and experiment workflows during development
+* A single command to run the full system
+* Cleaner development workflows
+* Reduced overhead in managing backend/frontend services
+* A predictable and unified start-up sequence
 
-This frontend will be extended in future branches to include chat history, better formatting, multi-agent controls, and richer UI components.
+This approach will be especially useful as the project grows into multi-agent orchestration, deployment workflows, and UI expansion.
 
 ## ✅ **Summary**
 
-This branch adds the project’s first user-facing component:
+This branch adds the project’s unified launcher:
 
-* Streamlit UI for interacting with the agent
-* Clean layout for prompts, model selection, and queries
-* Backend integration with structured request and response handling
+* Automatically starts backend (Uvicorn) + frontend (Streamlit)
+* Includes logging and error handling
+* Simplifies usage and development of the Multi-AI Agent
 
-The Multi-AI Agent can now be interacted with through a simple and intuitive web interface.
+The system can now be launched cleanly from a single file, making it easier to run and test the entire project end-to-end.

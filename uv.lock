@@ -597,6 +597,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain"
+version = "1.0.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/da/7a/63c041d1ee74c505e30ec882889117baa08afce2264bcb4463929bac4e94/langchain-1.0.7.tar.gz", hash = "sha256:e3f8ad742b4cdc91d728f96bd70e4688bc11ffeca3bd160c5fe9937625d541b9", size = 465198, upload-time = "2025-11-14T20:52:21.813Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/4a/02c14af46fa79ce7b02a0f8af46f5905cc7e8b647a5f1a7c793c03ac5063/langchain-1.0.7-py3-none-any.whl", hash = "sha256:cf33b4d60d7a2ff7f0f313441628927853192cdbab9d6d8ce229909a868bbf12", size = 93738, upload-time = "2025-11-14T20:52:20.717Z" },
+]
+
+[[package]]
 name = "langchain-classic"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -666,6 +680,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/88/02/0711848cd15bc2ffc4a08f00700e71e95fee665030894d767ebccbc9af31/langchain_groq-1.0.1.tar.gz", hash = "sha256:6e794761cc2428e027d3e94d2cd2718a366427eb8003d871944184161a275d91", size = 199574, upload-time = "2025-11-13T16:54:56.022Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/6e/f8d7cad7f7bdb6046bb992032e67c57b969e23930e4ebd1d8819c81efe9f/langchain_groq-1.0.1-py3-none-any.whl", hash = "sha256:088f408794ddf6d9959dbbef3d9de6a978fb6a9a7a2a85cf51fac4a147563bd2", size = 17709, upload-time = "2025-11-13T16:54:55.064Z" },
+]
+
+[[package]]
+name = "langchain-tavily"
+version = "0.2.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "langchain" },
+    { name = "langchain-core" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/75/a08ff73441fdaaef6e1ed83ee3b6747fd7c562ff772a09ebf5fe8fb252d3/langchain_tavily-0.2.13.tar.gz", hash = "sha256:97752167225b1459ffd2055bc8ffcec30658ff808dd5f7f9b2efa85ebbc7895a", size = 21842, upload-time = "2025-11-04T15:30:32.756Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/95/a2/7de8e9071b6a60cf9fe974744a2961e2dc77492d0ac29285a70b465cdb57/langchain_tavily-0.2.13-py3-none-any.whl", hash = "sha256:aa5b445c336f5f9314ab00f348554a42316af75ac839a0016442e382dd2cb1cb", size = 26025, upload-time = "2025-11-04T15:30:31.679Z" },
 ]
 
 [[package]]
@@ -763,6 +792,7 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-groq" },
+    { name = "langchain-tavily" },
     { name = "langgraph" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -776,6 +806,7 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-core", specifier = ">=1.0.5" },
     { name = "langchain-groq", specifier = ">=1.0.1" },
+    { name = "langchain-tavily", specifier = ">=0.2.13" },
     { name = "langgraph", specifier = ">=1.0.3" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
