@@ -1,9 +1,9 @@
-# 🖥️ **Backend API Layer — LLMOps Multi-AI Agent**
+# 🎨 **Frontend UI Layer — LLMOps Multi-AI Agent**
 
-This branch introduces the backend API layer for the Multi-AI Agent system, implemented through FastAPI.
-The new file **`app/backend/api.py`** provides a clean HTTP interface that external clients can use to interact with the LangGraph-powered agent.
+This branch introduces the first frontend interface for the Multi-AI Agent system.
+The new file **`app/frontend/ui.py`** provides a Streamlit-based user interface that allows users to interact directly with the FastAPI backend and, through it, the LangGraph-powered agent.
 
-It acts as the bridge between the system’s core reasoning logic and any frontend, UI, or external service that needs to query the agent.
+This frontend acts as the system’s visual interaction layer and offers an accessible way to test, query, and evaluate the agent’s reasoning capabilities.
 
 ## 🗂️ **Project Structure**
 
@@ -23,45 +23,46 @@ LLMOPS-MULTI-AI-AGENT/
 └── app/
     ├── main.py
     ├── backend/
-    │   └── api.py                      # NEW: FastAPI backend for agent interaction
     ├── common/
     ├── config/
     ├── core/
     └── frontend/
+        └── ui.py                       # NEW: Streamlit interface for agent interaction
 ```
 
 ## 🧩 **What Was Added in This Branch**
 
-### ✔️ `app/backend/api.py`
+### ✔️ `app/frontend/ui.py`
 
-This module provides the project’s first HTTP-facing interface. It includes:
+This module introduces the project’s first graphical interface. It provides:
 
-* A `/chat` POST endpoint
-* Request validation using a Pydantic model (`RequestState`)
-* Model-name validation against `settings.ALLOWED_MODEL_NAMES`
-* Invocation of the core agent (`get_response_from_ai_agents`)
-* Logging of requests, responses, and warnings
-* Structured error handling using FastAPI + `CustomException`
+* A Streamlit layout for defining a system prompt
+* A dropdown for selecting supported Groq models
+* A toggle for enabling Tavily-powered web search
+* A text area for the user’s query
+* A button to send structured requests to the FastAPI `/chat` endpoint
+* Rendering of the agent’s final response
+* Logging of frontend → backend communication events
 
-The backend is lightweight, fast, and cleanly integrated with the rest of the project.
+This file enables hands-on interaction with the agent without requiring command-line tools or manual API calls.
 
 ## 🎯 **Purpose of This Branch**
 
-To introduce a stable, well-structured API layer enabling:
+To introduce a simple yet functional frontend layer that:
 
-* External applications to interact with the agent
-* Clean separation between backend logic and core agent reasoning
-* A standardised JSON request/response workflow
-* Proper logging and error handling for production use
+* Makes the agent accessible through a graphical UI
+* Bridges user input with backend logic
+* Provides real-time feedback via a clean and minimal interface
+* Supports debugging and experiment workflows during development
 
-This backend will support future branches such as frontend development, multi-agent routing, authentication, or deployment layers.
+This frontend will be extended in future branches to include chat history, better formatting, multi-agent controls, and richer UI components.
 
 ## ✅ **Summary**
 
-This branch adds the project’s first backend API component:
+This branch adds the project’s first user-facing component:
 
-* FastAPI-based HTTP interface
-* Input validation and structured error reporting
-* Seamless connection to the LangGraph-based core agent
+* Streamlit UI for interacting with the agent
+* Clean layout for prompts, model selection, and queries
+* Backend integration with structured request and response handling
 
-The Multi-AI Agent can now be queried programmatically through a clean, documented API endpoint.
+The Multi-AI Agent can now be interacted with through a simple and intuitive web interface.
