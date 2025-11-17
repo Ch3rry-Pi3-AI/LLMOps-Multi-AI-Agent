@@ -4,29 +4,57 @@ ui.py
 
 Streamlit-based frontend interface for the **LLMOps Multi-AI Agent** project.
 
-Provides:
-* Role presets (e.g. medical / legal / journalist style)
-* Model selection
-* Optional web search
-* Query input and response display
+This module provides a role-based, interactive UI that allows users to:
+
+* Select a persona preset (e.g. Medical Information, Legal Information, Analyst)
+* Choose a Groq model from allowed configurations
+* Enable or disable Tavily-powered web search
+* Define or customise a system prompt
+* Enter their query
+* Send the request to the FastAPI backend
+* Display the final AI-generated response
+
+The interface acts as the visual entry point to the Multi-AI Agent’s reasoning
+engine, offering a streamlined way to test different modes of instruction and
+model behaviour through a clean, simple layout.
 """
 
+# ======================================================================
+# Imports
+# ======================================================================
+
+# Streamlit UI framework
 import streamlit as st
+
+# HTTP client for communicating with the FastAPI backend
 import requests
 
+# Project configuration (allowed models, environment settings)
 from app.config.settings import settings
+
+# Project-wide logging utility
 from app.common.logger import get_logger
+
+# Custom exception class for structured error reporting
 from app.common.custom_exception import CustomException
 
 
+# ======================================================================
+# Initialisation
+# ======================================================================
+
+# Logger for this module
 logger = get_logger(__name__)
 
+# Configure the Streamlit page layout
 st.set_page_config(page_title="Multi AI Agent", layout="wide")
 
+
 # ======================================================================
-# Role presets
+# Role Presets
 # ======================================================================
 
+# Predefined system prompts for various agent personas
 ROLE_PRESETS = {
     "General Assistant": (
         "You are a helpful, neutral AI assistant. "
@@ -53,41 +81,46 @@ ROLE_PRESETS = {
     ),
 }
 
+# Backend API endpoint
 API_URL = "http://127.0.0.1:9999/chat"
 
+
 # ======================================================================
-# Layout: sidebar for config, main for chat
+# Layout: Sidebar (Configuration) and Main Panel (Chat Interface)
 # ======================================================================
 
+# Page title
 st.title("Multi AI Agent")
 
+# Sidebar contains all configuration options
 with st.sidebar:
     st.header("⚙️ Agent Configuration")
 
-    # Role selection
+    # Dropdown for role preset
     selected_role = st.selectbox(
         "Select agent role:",
         list(ROLE_PRESETS.keys()),
         index=0,
     )
 
-    # Model selection
+    # Dropdown for Groq model selection
     selected_model = st.selectbox(
         "Select your AI model:",
         settings.ALLOWED_MODEL_NAMES,
     )
 
-    # Web search toggle
+    # Toggle for enabling Tavily-based web search
     allow_web_search = st.checkbox("Allow web search", value=False)
 
     st.markdown("---")
-    st.caption("You can edit the system prompt below in the main panel.")
+    st.caption("You may edit the system prompt manually in the main panel.")
+
 
 # ======================================================================
-# Main panel: system prompt, query, response
+# Main Panel Inputs: system prompt, query, and action button
 # ======================================================================
 
-# Prefill system prompt from role preset, but allow editing
+# Retrieve default role-based prompt and allow user edits
 default_prompt = ROLE_PRESETS.get(selected_role, ROLE_PRESETS["General Assistant"])
 system_prompt = st.text_area(
     "System prompt (agent instructions):",
@@ -95,21 +128,27 @@ system_prompt = st.text_area(
     height=120,
 )
 
+# User's natural language query
 user_query = st.text_area("Enter your query:", height=160)
 
+# Split layout for button spacing
 col1, col2 = st.columns([1, 3])
 
 with col1:
     ask_button = st.button("Ask Agent")
 
 with col2:
-    st.write("")  # small spacer
+    st.write("")  # simple layout spacer
+
 
 # ======================================================================
-# Handle submission
+# Backend Communication Logic
 # ======================================================================
 
+# When the button is pressed and query is not empty
 if ask_button and user_query.strip():
+
+    # Construct payload for backend API call
     payload = {
         "model_name": selected_model,
         "system_prompt": system_prompt,
@@ -120,9 +159,13 @@ if ask_button and user_query.strip():
     try:
         logger.info("Sending request to backend")
 
+        # Show loading indicator while waiting on backend
         with st.spinner("Thinking..."):
             response = requests.post(API_URL, json=payload)
 
+        # --------------------------------------------------------------
+        # Backend returned success
+        # --------------------------------------------------------------
         if response.status_code == 200:
             agent_response = response.json().get("response", "")
             logger.info("Successfully received response from backend")
@@ -130,12 +173,18 @@ if ask_button and user_query.strip():
             st.subheader("Agent Response")
             st.markdown(agent_response.replace("\n", "<br>"), unsafe_allow_html=True)
 
+        # --------------------------------------------------------------
+        # Backend returned an error status
+        # --------------------------------------------------------------
         else:
             logger.error(f"Backend error. Status code: {response.status_code}")
             st.error("Error communicating with backend. Please check the logs.")
 
     except Exception as e:
+        # Network-level or unexpected exceptions
         logger.error("Error occurred while sending request to backend")
         st.error(str(CustomException("Failed to communicate to backend", error_detail=e)))
+
+# Handle case where button was pressed with no query entered
 elif ask_button and not user_query.strip():
     st.warning("Please enter a query before asking the agent.")
