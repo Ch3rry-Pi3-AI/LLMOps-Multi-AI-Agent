@@ -1,312 +1,362 @@
-# 📊 **SonarQube Setup & Jenkins Integration — LLMOps Multi-AI Agent**
+# ☁️ **AWS Integration & ECR Deployment — LLMOps Multi-AI Agent**
 
-This branch introduces **SonarQube-based code quality analysis** and integrates it with the existing **Jenkins CI/CD pipeline**.
+This branch introduces **AWS integration** into the CI/CD pipeline.
+Jenkins is now able to:
 
-You will:
+* Authenticate with AWS
+* Build Docker images
+* Push those images to **Amazon Elastic Container Registry (ECR)**
+* Trigger ECS deployment (via later stages)
 
-* Run SonarQube using Docker on WSL
-* Install and configure SonarQube plugins in Jenkins
-* Create a local project and token in SonarQube
-* Configure SonarQube server and scanner inside Jenkins
-* Add a SonarQube stage to the Jenkinsfile
-* Connect Jenkins and SonarQube containers via a shared Docker network
-* Run the pipeline and inspect code quality results in SonarQube
+This stage focuses on configuring all AWS components, updating Jenkins, and verifying that a full **“Build → Tag → Push”** Docker workflow succeeds.
 
 ## 🗂️ **Project Structure Update**
 
-No new tracked files are added in this branch.
-The main change is an **updated Jenkinsfile** that now includes a **SonarQube analysis stage**.
+No new files were added to the codebase for this branch.
+The primary change is an **update to the Jenkinsfile**, specifically the stage:
 
-```text
-LLMOPS-MULTI-AI-AGENT/
-├── Jenkinsfile                   # UPDATED: SonarQube analysis stage added
-├── Dockerfile
-├── custom_jenkins/
-│   └── Dockerfile
-└── app/
-    ├── backend/
-    ├── common/
-    ├── config/
-    ├── core/
-    ├── frontend/
-    └── main.py
+```
+Build and Push Docker Image to ECR
 ```
 
-All other changes are environment and service configuration (SonarQube + Jenkins).
 
-## 1️⃣ Download and Run SonarQube Docker Container
 
-1. Go to DockerHub: [https://hub.docker.com/](https://hub.docker.com/)
-2. Search for **SonarQube**
+# 1️⃣ Install Required Jenkins Plugins
 
-<p align="center">
-  <img src="img/sonarqube/dockerhub_search.png" width="100%">
-</p>
-
-Scroll down to find the Docker run command section.
-
-In a **new WSL terminal** (Ubuntu in VS Code), run the following commands one by one to configure system limits:
-
-```bash
-sysctl -w vm.max_map_count=524288
-sysctl -w fs.file-max=131072
-ulimit -n 131072
-ulimit -u 8192
-```
-
-Then go to the official SonarQube Docker docs:
-[https://docs.sonarsource.com/sonarqube-server/try-out-sonarqube](https://docs.sonarsource.com/sonarqube-server/try-out-sonarqube)
-
-From that page, locate the Docker command:
-
-<p align="center">
-  <img src="img/sonarqube/install_docker_img.png" width="100%">
-</p>
-
-The base command from the docs is:
-
-```bash
-docker run -d --name sonarqube -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:latest
-```
-
-Modify it to use a **custom container name**:
-
-```bash
-docker run -d --name sonarqube-dind -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 sonarqube:latest
-```
-
-Run this command in your WSL terminal.
-
-Example output:
-
-```text
-Unable to find image 'sonarqube:latest' locally
-latest: Pulling from library/sonarqube
-4f4fb700ef54: Pull complete
-4a0e444f3c26: Pull complete
-0b92fa77023f: Pull complete
-1321ce5b3e3a: Pull complete
-8fd6319e1acb: Pull complete
-f878172f1ac3: Pull complete
-f0e656fd3d7c: Pull complete
-20043066d3d5: Pull complete
-Digest: sha256:48dd0e946ad6481dde43bb31d1a7af09c22f59be6399b195dcce7b87d82c5f40
-Status: Downloaded newer image for sonarqube:latest
-9eca6e2749e6d61032c056302783826913cb326d9e75abbd1a7f4b16e1f6b57f
-```
-
-Now, access SonarQube at:
-
-```text
-http://<WSL_IP>:9000
-```
-
-Replace `<WSL_IP>` with your actual WSL IP address.
-
-<p align="center">
-  <img src="img/sonarqube/login.png" width="100%">
-</p>
-
-Log in with the default credentials:
-
-```text
-Username: admin
-Password: admin
-```
-
-After login, you’ll see the SonarQube landing page:
-
-<p align="center">
-  <img src="img/SonarQube/landing_page.png" width="100%">
-</p>
-
-## 2️⃣ Install Jenkins Plugins for SonarQube
-
-In Jenkins:
+Inside Jenkins:
 
 1. Go to **Manage Jenkins → Manage Plugins**
-2. Install the following plugins:
+2. Search for and install:
 
-   * **SonarScanner**
-   * **SonarQualityGates**
+* **Amazon Web Services SDK :: All**
+* **AWS Credentials**
 
 <p align="center">
-  <img src="img/sonarqube/jenkins_plugins.png" width="100%">
+  <img src="img/aws_ecr/plugins.png" width="100%">
 </p>
 
-Restart the Jenkins container to apply changes:
+Restart your Jenkins container:
 
 ```bash
 docker restart jenkins-dind
 ```
 
-## 3️⃣ Create a Local Project and Token in SonarQube
 
-In the SonarQube UI:
 
-1. On the landing page, click **Create a local project** at the bottom
-2. Enter a project name and continue
-3. Choose **Follows the instance's default**
-4. Click **Create**
+# 2️⃣ Install AWS CLI Inside the Jenkins Container
 
-<p align="center">
-  <img src="img/sonarqube/new_project.png" width="100%">
-</p>
-
-Now generate a token:
-
-1. Go to **My Account** (top-right avatar)
-2. Navigate to the **Security** tab
-3. Click **Generate new token**
-
-<p align="center">
-  <img src="img/sonarqube/create-token.png" width="100%">
-</p>
-
-Copy the generated token and keep it safe.
-
-## 4️⃣ Add SonarQube Token to Jenkins
-
-In Jenkins:
-
-1. Go to **Manage Jenkins → Credentials → Global**
-2. Click **Add Credentials**
-3. Choose **Secret text**
-4. Set:
-
-   * **ID:** `sonarqube-token`
-   * **Secret:** paste the token from SonarQube
-5. Click **OK** to save
-
-This credential will be used by the Jenkins pipeline for authentication.
-
-## 5️⃣ Configure SonarQube Server in Jenkins
-
-In Jenkins:
-
-1. Go to **Manage Jenkins → System Configuration**
-2. Scroll to **SonarQube servers**
-3. Click **Add SonarQube**
-
-Fill in:
-
-* **Name:** `Sonarqube` (or another label you prefer)
-* **URL:** `http://<WSL_IP>:9000` (using your actual WSL IP at first)
-* **Server authentication token:** choose the `sonarqube-token` credential
-
-<p align="center">
-  <img src="img/sonarqube/sonarqube_server.png" width="100%">
-</p>
-
-Click **Apply** then **Save**.
-
-## 6️⃣ Configure SonarQube Scanner in Jenkins
-
-In Jenkins:
-
-1. Go to **Manage Jenkins → Tools**
-2. Locate **SonarQube Scanner**
-3. Click **Add SonarQube Scanner**
-4. Provide a name (e.g. `Sonarqube`)
-5. Tick **Install automatically**
-
-<p align="center">
-  <img src="img/sonarqube/scanner.png" width="100%">
-</p>
-
-Click **Apply** and **Save**.
-
-## 7️⃣ Add SonarQube Stage to Jenkinsfile
-
-In your project:
-
-1. Open the **Jenkinsfile** in VS Code
-2. Add (or ensure you have) the **SonarQube analysis stage**, using:
-
-   * `withSonarQubeEnv('Sonarqube')`
-   * `${SONAR_SCANNER_HOME}`
-3. Commit and push the updated Jenkinsfile to your GitHub repository
-
-This stage is already present in your current code and uses:
-
-```groovy
--Dsonar.host.url=http://sonarqube-dind:9000
-```
-
-which will be wired up in the next step using Docker networking.
-
-## 8️⃣ Create Docker Network for Jenkins and SonarQube
-
-To allow Jenkins (inside `jenkins-dind`) to reach SonarQube (inside `sonarqube-dind`) using container names:
-
-Create a dedicated Docker network:
+Open your WSL terminal, then navigate to your `custom_jenkins` folder:
 
 ```bash
-docker network create dind-network
+cd custom_jenkins
 ```
 
-Attach both containers to this network:
+Enter the Jenkins container as **root**:
 
 ```bash
-docker network connect dind-network jenkins-dind
-docker network connect dind-network sonarqube-dind
+docker exec -u root -it jenkins-dind bash
 ```
 
-Now Jenkins can reach SonarQube via:
+Update package lists and install tools:
 
-```text
-http://sonarqube-dind:9000
+```bash
+apt update
+apt install -y unzip curl
 ```
 
-This is why the Jenkinsfile uses:
+Download and install AWS CLI:
 
-```groovy
--Dsonar.host.url=http://sonarqube-dind:9000
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+./aws/install
 ```
 
-Restart the Jenkins container:
+Verify installation:
+
+```bash
+aws --version
+```
+
+Expected output:
+
+```
+aws-cli/2.31.38 Python/3.13.9 Linux/6.6.87.2-microsoft-standard-WSL2 exe/x86_64.debian.13
+```
+
+Exit the container:
+
+```bash
+exit
+```
+
+Restart Jenkins again:
 
 ```bash
 docker restart jenkins-dind
 ```
 
-## 9️⃣ Run the Pipeline and Inspect Results in SonarQube
 
-Back in Jenkins:
 
-1. Open your pipeline job
-2. Click **Build Now**
-3. Wait for the pipeline to complete successfully
+# 3️⃣ Create IAM User for Jenkins (AWS Access)
 
-Once the build finishes, go to your **SonarQube UI → Projects**.
-You should see a successful analysis:
+Go to AWS Console → **IAM → Users → Create User**
 
-<p align="center">
-  <img src="img/sonarqube/sonarqube_run_success.png" width="100%">
-</p>
+Name the user:
 
-Click on your project to inspect overall code quality:
+```
+multi-ai-agent
+```
 
-<p align="center">
-  <img src="img/sonarqube/passed.png" width="100%">
-</p>
+Choose **Attach policies directly**, then attach:
 
-You can drill down into individual files to identify code quality issues:
+* AmazonEC2ContainerRegistryFullAccess
 
 <p align="center">
-  <img src="img/sonarqube/code_quality.png" width="100%">
+  <img src="img/aws_ecr/create_user.png" width="100%">
 </p>
 
-## ✅ Summary
+Create the user, then create an **Access Key**:
 
-This branch establishes:
+* Choose: **Command Line Interface (CLI)**
+* Click **Create**
 
-* A working **SonarQube instance** running in Docker on WSL
-* Jenkins plugins for SonarQube analysis and quality gates
-* A **local SonarQube project** and authentication token
-* Full **SonarQube server + scanner configuration** in Jenkins
-* A dedicated Docker network linking `jenkins-dind` and `sonarqube-dind`
-* A **SonarQube analysis stage** in the Jenkinsfile
-* Successful quality analysis visible in the SonarQube UI
+Copy:
 
-Your CI pipeline now not only builds and deploys, but also continuously evaluates **code quality** using SonarQube.
+* Access Key ID
+* Secret Access Key
+
+You’ll need these for Jenkins.
+
+
+
+# 4️⃣ Add AWS Credentials to Jenkins
+
+Go to:
+
+**Jenkins Dashboard → Manage Jenkins → Manage Credentials → Global**
+
+Add a **new credential**:
+
+* Kind: **AWS Credentials**
+* ID: `aws-token`
+* Access Key ID: *(paste from AWS)*
+* Secret Access Key: *(paste from AWS)*
+
+<p align="center">
+  <img src="img/aws_ecr/aws_cred.png" width="100%">
+</p>
+
+Save.
+
+
+
+# 5️⃣ Create an ECR Repository
+
+In AWS Console:
+
+1. Go to **ECR (Elastic Container Registry)**
+2. Click **Create Repository**
+3. Name it:
+
+```
+my-repo
+```
+
+Save the repository URL — it will follow this pattern:
+
+```
+<aws-account-id>.dkr.ecr.<region>.amazonaws.com/my-repo
+```
+
+
+
+# 6️⃣ Update Jenkinsfile for AWS Build + Push Stage
+
+Update the environment block:
+
+```groovy
+AWS_REGION = 'eu-west-2'   // example for London region
+ECR_REPO   = 'my-repo'
+IMAGE_TAG  = 'latest'
+```
+
+The “Build & Push Docker Image to ECR” stage is already present, but make sure it references your repo & region.
+
+Restart Jenkins to apply changes:
+
+```bash
+docker restart jenkins-dind
+```
+
+
+
+# 7️⃣ Push Changes to GitHub and Run Pipeline
+
+Commit and push your updated Jenkinsfile:
+
+```bash
+git add Jenkinsfile
+git commit -m "Add AWS ECR deployment stage"
+git push
+```
+
+This triggers Jenkins (if webhooks are configured), or run manually:
+
+1. Open Jenkins dashboard
+2. Select your pipeline
+3. Click **Build Now**
+
+If the build & push succeed, go to **AWS Console → ECR → Repositories → my-repo**
+You should see:
+
+<p align="center">
+  <img src="img/aws_ecr/ecr_image.png" width="100%">
+</p>
+
+Your `latest` tag may show two manifests (`-` entries) — this is normal for multi-architecture Docker images.
+
+
+
+# ✅ Summary
+
+This branch completes the following:
+
+* Installed AWS plugins in Jenkins
+* Installed AWS CLI inside `jenkins-dind`
+* Created IAM user + credentials
+* Added AWS credentials to Jenkins
+* Created ECR repository
+* Updated Jenkinsfile to build, tag, and push Docker images
+* Verified images successfully appear in ECR
+
+Your Jenkins pipeline is now fully capable of pushing Docker images to AWS ECR.
+
+
+
+# 🛠️ Troubleshooting — Docker Permissions with Jenkins DinD
+
+Below is the **exact troubleshooting section** you asked to include.
+
+### Why errors happened
+
+Most failures were caused by:
+
+```
+permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
+```
+
+This comes from one of two places:
+
+1. Your **WSL host user** cannot access Docker
+2. The **jenkins user inside the jenkins-dind container** cannot access Docker
+
+Fix both and the pipeline succeeds.
+
+## 1️⃣ Fix WSL Host-Level Permissions
+
+Run these in **WSL**, not inside Docker.
+
+### Diagnose
+
+Check groups:
+
+```bash
+groups
+```
+
+Check socket:
+
+```bash
+ls -l /var/run/docker.sock
+```
+
+You want:
+
+```
+srw-rw---- 1 root docker ... /var/run/docker.sock
+```
+
+Test Docker:
+
+```bash
+docker ps
+```
+
+If you get a permission error: fix the socket.
+
+### Fix
+
+```bash
+sudo chown root:docker /var/run/docker.sock
+sudo chmod 660 /var/run/docker.sock
+```
+
+Verify:
+
+```bash
+docker ps
+```
+
+If this works, host-level permissions are now correct.
+
+
+
+## 2️⃣ Fix Jenkins Container Permissions
+
+Enter container as **jenkins**:
+
+```bash
+docker exec -u jenkins -it jenkins-dind bash
+```
+
+Check:
+
+```bash
+whoami
+id
+ls -l /var/run/docker.sock
+docker ps
+```
+
+If you see something like:
+
+* jenkins in group ID 995
+* docker.sock owned by group 989
+
+then Jenkins cannot talk to Docker because group IDs don't match.
+
+### Fix group mismatch
+
+Enter container as **root**:
+
+```bash
+docker exec -u root -it jenkins-dind bash
+```
+
+Fix the `docker` group to match the socket:
+
+```bash
+groupmod -g 989 docker
+usermod -aG docker jenkins
+chown root:docker /var/run/docker.sock
+chmod 660 /var/run/docker.sock
+```
+
+Restart:
+
+```bash
+exit
+docker restart jenkins-dind
+```
+
+### Verify again as jenkins:
+
+```bash
+docker exec -u jenkins -it jenkins-dind bash
+docker ps
+```
+
+If it works without error —
+your Jenkins pipeline can now run Docker builds successfully.
+
