@@ -27,16 +27,16 @@ configured earlier, allowing full Docker build capability.
 pipeline {
     agent any
 
-    // environment {
-    //     // SonarQube configuration
-    //     SONAR_PROJECT_KEY = 'LLMOPS'
-    //     SONAR_SCANNER_HOME = tool 'Sonarqube'
+    environment {
+        // SonarQube configuration
+        SONAR_PROJECT_KEY = 'LLMOPS'
+        SONAR_SCANNER_HOME = tool 'Sonarqube'
 
     //     // AWS settings
     //     AWS_REGION = 'us-east-1'
     //     ECR_REPO   = 'my-repo'
     //     IMAGE_TAG  = 'latest'
-    // }
+    }
 
 
 // ======================================================================
@@ -65,26 +65,26 @@ pipeline {
         }
 
 
-        // // --------------------------------------------------------------
-        // // Stage 2: Run SonarQube Static Analysis
-        // // --------------------------------------------------------------
-        // stage('SonarQube Analysis') {
-        //     steps {
-        //         withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+        // --------------------------------------------------------------
+        // Stage 2: Run SonarQube Static Analysis
+        // --------------------------------------------------------------
+        stage('SonarQube Analysis') {
+            steps {
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
 
-        //             withSonarQubeEnv('Sonarqube') {
+                    withSonarQubeEnv('Sonarqube') {
 
-        //                 sh """
-        //                 ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-        //                   -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-        //                   -Dsonar.sources=. \
-        //                   -Dsonar.host.url=http://sonarqube-dind:9000 \
-        //                   -Dsonar.login=${SONAR_TOKEN}
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
+                        sh """
+                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://sonarqube-dind:9000 \
+                          -Dsonar.login=${SONAR_TOKEN}
+                        """
+                    }
+                }
+            }
+        }
 
 
         // // --------------------------------------------------------------
