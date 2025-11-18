@@ -1,362 +1,269 @@
-# ☁️ **AWS Integration & ECR Deployment — LLMOps Multi-AI Agent**
+# 🌩️ **AWS ECS Fargate Deployment — LLMOps Multi-AI Agent**
 
-This branch introduces **AWS integration** into the CI/CD pipeline.
-Jenkins is now able to:
+This branch completes the final stage of the project: deploying the Multi-AI Agent application to **Amazon Web Services ECS Fargate**, fully automated via the Jenkins pipeline.
 
-* Authenticate with AWS
-* Build Docker images
-* Push those images to **Amazon Elastic Container Registry (ECR)**
-* Trigger ECS deployment (via later stages)
+You will take the Docker image already pushed to Amazon ECR and deploy it into a serverless container environment, exposing both the **Streamlit UI (8501)** and the **FastAPI backend (9999)**.
 
-This stage focuses on configuring all AWS components, updating Jenkins, and verifying that a full **“Build → Tag → Push”** Docker workflow succeeds.
+This README walks through the entire deployment process with precise steps, AWS UI references, image screenshots, and the final cleanup instructions.
 
-## 🗂️ **Project Structure Update**
+## 🧩 **What Was Added in This Branch**
 
-No new files were added to the codebase for this branch.
-The primary change is an **update to the Jenkinsfile**, specifically the stage:
-
-```
-Build and Push Docker Image to ECR
-```
+* ECS cluster configuration
+* ECS task definition using your ECR image
+* Environment variables for GROQ + Tavily
+* ECS service creation
+* Security group updates
+* Application deployment and verification
+* Jenkins pipeline changes for ECS deployment
+* Cleanup steps and shutdown
 
 
 
-# 1️⃣ Install Required Jenkins Plugins
+# 🚀 **1. Create ECS Cluster and Task Definition**
 
-Inside Jenkins:
+## Create ECS Cluster
 
-1. Go to **Manage Jenkins → Manage Plugins**
-2. Search for and install:
+Navigate in AWS to:
 
-* **Amazon Web Services SDK :: All**
-* **AWS Credentials**
+**Elastic Container Service (ECS) → Clusters → Create Cluster**
 
-<p align="center">
-  <img src="img/aws_ecr/plugins.png" width="100%">
-</p>
-
-Restart your Jenkins container:
-
-```bash
-docker restart jenkins-dind
-```
-
-
-
-# 2️⃣ Install AWS CLI Inside the Jenkins Container
-
-Open your WSL terminal, then navigate to your `custom_jenkins` folder:
-
-```bash
-cd custom_jenkins
-```
-
-Enter the Jenkins container as **root**:
-
-```bash
-docker exec -u root -it jenkins-dind bash
-```
-
-Update package lists and install tools:
-
-```bash
-apt update
-apt install -y unzip curl
-```
-
-Download and install AWS CLI:
-
-```bash
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-./aws/install
-```
-
-Verify installation:
-
-```bash
-aws --version
-```
-
-Expected output:
+Give your cluster a name, for example:
 
 ```
-aws-cli/2.31.38 Python/3.13.9 Linux/6.6.87.2-microsoft-standard-WSL2 exe/x86_64.debian.13
+multi-ai-agent-cluster
 ```
 
-Exit the container:
-
-```bash
-exit
-```
-
-Restart Jenkins again:
-
-```bash
-docker restart jenkins-dind
-```
-
-
-
-# 3️⃣ Create IAM User for Jenkins (AWS Access)
-
-Go to AWS Console → **IAM → Users → Create User**
-
-Name the user:
+Select:
 
 ```
-multi-ai-agent
+Fargate only
 ```
 
-Choose **Attach policies directly**, then attach:
+<img src="img/aws_fargate/create_ecs_cluster.png" width="100%">
 
-* AmazonEC2ContainerRegistryFullAccess
+Click **Create**.
 
-<p align="center">
-  <img src="img/aws_ecr/create_user.png" width="100%">
-</p>
+## Create ECS Task Definition
 
-Create the user, then create an **Access Key**:
+Navigate to:
 
-* Choose: **Command Line Interface (CLI)**
-* Click **Create**
+**ECS → Task Definitions → Create new Task Definition**
 
-Copy:
+Choose:
 
-* Access Key ID
-* Secret Access Key
+```
+Launch type: Fargate
+```
 
-You’ll need these for Jenkins.
+Give it a name:
+
+```
+multi-ai-agent-def
+```
+
+Set CPU + Memory:
+
+**2 vCPU**
+**6 GB Memory**
+
+<img src="img/aws_fargate/task_def1.png" width="100%">
+
+Under **Container details**:
+
+* Name: `llmops`
+* Image: use your ECR image URL, such as:
+
+```
+047719615463.dkr.ecr.eu-west-2.amazonaws.com/my-repo:latest
+```
+
+### Configure port mappings
+
+Add **two** mappings:
+
+```
+Port: 8501   Protocol: TCP
+Port: 9999   Protocol: TCP
+```
+
+<img src="img/aws_fargate/port_mappings.png" width="100%">
+
+### Add Environment Variables
+
+Scroll down → **Add environment variable**
+
+Add:
+
+```
+Key: GROQ_API_KEY     Value: <your-value>
+Key: TAVILY_API_KEY   Value: <your-value>
+```
+
+Click **Create**.
 
 
 
-# 4️⃣ Add AWS Credentials to Jenkins
+# 🛳️ **2. Create ECS Service**
+
+Return to:
+
+**Clusters → your cluster → Services → Create**
+
+Select your task definition:
+
+```
+multi-ai-agent-def
+```
+
+Leave everything else **default**.
+
+Click **Create**.
+
+
+
+# 🔐 **3. Update Security Group Inbound Rules**
+
+Search for:
+
+```
+Security Groups
+```
+
+<img src="img/aws_fargate/search_sec_group.png" width="100%">
+
+Open the **default** security group → **Edit inbound rules**.
+
+Add:
+
+* Custom TCP → Port 8501 → Source: Anywhere
+* Custom TCP → Port 9999 → Source: Anywhere
+
+<img src="img/aws_fargate/inbound_rules.png" width="100%">
+
+Save the rules.
+
+
+
+# 🌍 **4. Access Your Deployed Application**
+
+Once the service is running:
 
 Go to:
 
-**Jenkins Dashboard → Manage Jenkins → Manage Credentials → Global**
+**Cluster → Service → Tasks → Click running task**
 
-Add a **new credential**:
+Find **Public IP**:
 
-* Kind: **AWS Credentials**
-* ID: `aws-token`
-* Access Key ID: *(paste from AWS)*
-* Secret Access Key: *(paste from AWS)*
+<img src="img/aws_fargate/public_ip.png" width="100%">
 
-<p align="center">
-  <img src="img/aws_ecr/aws_cred.png" width="100%">
-</p>
-
-Save.
-
-
-
-# 5️⃣ Create an ECR Repository
-
-In AWS Console:
-
-1. Go to **ECR (Elastic Container Registry)**
-2. Click **Create Repository**
-3. Name it:
+Open:
 
 ```
-my-repo
+http://<PUBLIC-IP>:8501/
 ```
 
-Save the repository URL — it will follow this pattern:
+Example:
 
 ```
-<aws-account-id>.dkr.ecr.<region>.amazonaws.com/my-repo
+http://52.56.153.122:8501/
+```
+
+Your app should now load.
+
+
+
+# 👤 **5. Add ECS Permissions to IAM User**
+
+Go to:
+
+**IAM → Users → multi-ai-agent → Add Permissions**
+
+Attach:
+
+```
+AmazonECS_FullAccess
 ```
 
 
 
-# 6️⃣ Update Jenkinsfile for AWS Build + Push Stage
+# 🧪 **6. Update Jenkins Pipeline (Final Stage)**
 
-Update the environment block:
+In your **Jenkinsfile**, uncomment the final stage and update it with your:
+
+* AWS region
+* ECS cluster name
+* ECS service name
+
+Example:
 
 ```groovy
-AWS_REGION = 'eu-west-2'   // example for London region
-ECR_REPO   = 'my-repo'
-IMAGE_TAG  = 'latest'
+aws ecs update-service \
+  --cluster multi-ai-agent-cluster \
+  --service multi-ai-agent-def-service-shqlo39p \
+  --force-new-deployment \
+  --region eu-west-2
 ```
 
-The “Build & Push Docker Image to ECR” stage is already present, but make sure it references your repo & region.
+Save and push your changes to GitHub.
 
-Restart Jenkins to apply changes:
+Run your Jenkins pipeline again.
+Jenkins will now trigger a **new ECS deployment**.
+
+
+
+# 🔄 **7. Verify Deployment**
+
+Return to:
+
+**ECS → Cluster → Tasks**
+
+You should now see:
+
+* old task → **STOPPED**
+* new task → **RUNNING**
+
+<img src="img/aws_fargate/new_task_running.png" width="100%">
+
+Copy the **new public IP**, and open the app in your browser.
+
+
+
+# 🎉 **8. Project Complete**
+
+Your entire Multi-AI Agent system is now:
+
+* containerised
+* stored in ECR
+* deployed via ECS Fargate
+* automatically redeployed through Jenkins
+
+This completes the cloud deployment pipeline.
+
+
+
+# 🧼 **9. Cleanup Instructions**
+
+Delete the ECS cluster and ECR repository in AWS.
+
+Then in **WSL terminal** run:
 
 ```bash
-docker restart jenkins-dind
+docker system prune -a --volumes -f
+docker stop jenkins-dind
+docker stop sonarqube-dind
+
+docker rm jenkins-dind
+docker rm sonarqube-dind
+docker rm -f jenkins-dind sonarqube-dind
+
+docker rmi jenkins-dind
+docker rmi sonarqube:latest
+
+docker volume rm jenkins_home
+docker volume prune -f
+
+docker network rm dind-network
+docker builder prune -a -f
 ```
 
-
-
-# 7️⃣ Push Changes to GitHub and Run Pipeline
-
-Commit and push your updated Jenkinsfile:
-
-```bash
-git add Jenkinsfile
-git commit -m "Add AWS ECR deployment stage"
-git push
-```
-
-This triggers Jenkins (if webhooks are configured), or run manually:
-
-1. Open Jenkins dashboard
-2. Select your pipeline
-3. Click **Build Now**
-
-If the build & push succeed, go to **AWS Console → ECR → Repositories → my-repo**
-You should see:
-
-<p align="center">
-  <img src="img/aws_ecr/ecr_image.png" width="100%">
-</p>
-
-Your `latest` tag may show two manifests (`-` entries) — this is normal for multi-architecture Docker images.
-
-
-
-# ✅ Summary
-
-This branch completes the following:
-
-* Installed AWS plugins in Jenkins
-* Installed AWS CLI inside `jenkins-dind`
-* Created IAM user + credentials
-* Added AWS credentials to Jenkins
-* Created ECR repository
-* Updated Jenkinsfile to build, tag, and push Docker images
-* Verified images successfully appear in ECR
-
-Your Jenkins pipeline is now fully capable of pushing Docker images to AWS ECR.
-
-
-
-# 🛠️ Troubleshooting — Docker Permissions with Jenkins DinD
-
-Below is the **exact troubleshooting section** you asked to include.
-
-### Why errors happened
-
-Most failures were caused by:
-
-```
-permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
-```
-
-This comes from one of two places:
-
-1. Your **WSL host user** cannot access Docker
-2. The **jenkins user inside the jenkins-dind container** cannot access Docker
-
-Fix both and the pipeline succeeds.
-
-## 1️⃣ Fix WSL Host-Level Permissions
-
-Run these in **WSL**, not inside Docker.
-
-### Diagnose
-
-Check groups:
-
-```bash
-groups
-```
-
-Check socket:
-
-```bash
-ls -l /var/run/docker.sock
-```
-
-You want:
-
-```
-srw-rw---- 1 root docker ... /var/run/docker.sock
-```
-
-Test Docker:
-
-```bash
-docker ps
-```
-
-If you get a permission error: fix the socket.
-
-### Fix
-
-```bash
-sudo chown root:docker /var/run/docker.sock
-sudo chmod 660 /var/run/docker.sock
-```
-
-Verify:
-
-```bash
-docker ps
-```
-
-If this works, host-level permissions are now correct.
-
-
-
-## 2️⃣ Fix Jenkins Container Permissions
-
-Enter container as **jenkins**:
-
-```bash
-docker exec -u jenkins -it jenkins-dind bash
-```
-
-Check:
-
-```bash
-whoami
-id
-ls -l /var/run/docker.sock
-docker ps
-```
-
-If you see something like:
-
-* jenkins in group ID 995
-* docker.sock owned by group 989
-
-then Jenkins cannot talk to Docker because group IDs don't match.
-
-### Fix group mismatch
-
-Enter container as **root**:
-
-```bash
-docker exec -u root -it jenkins-dind bash
-```
-
-Fix the `docker` group to match the socket:
-
-```bash
-groupmod -g 989 docker
-usermod -aG docker jenkins
-chown root:docker /var/run/docker.sock
-chmod 660 /var/run/docker.sock
-```
-
-Restart:
-
-```bash
-exit
-docker restart jenkins-dind
-```
-
-### Verify again as jenkins:
-
-```bash
-docker exec -u jenkins -it jenkins-dind bash
-docker ps
-```
-
-If it works without error —
-your Jenkins pipeline can now run Docker builds successfully.
-
+Everything is now fully cleaned.
