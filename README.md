@@ -1,209 +1,140 @@
-# 🔧 **Jenkins Setup (Docker-in-Docker) — LLMOps Multi-AI Agent**
+# 🔗 **GitHub Integration with Jenkins — LLMOps Multi-AI Agent**
 
-This branch introduces the full Jenkins CI/CD setup for the Multi-AI Agent project.
-Two Dockerfiles were created:
-
-* A **root Dockerfile** for the application
-* A **custom Jenkins Dockerfile** inside `custom_jenkins/` enabling **Docker-in-Docker (DinD)**
-
-This setup allows Jenkins to build and push Docker images, run containers, and execute CI pipelines entirely from inside Jenkins itself.
-
-The instructions below walk through building the custom Jenkins image, running it, retrieving the admin password, accessing Jenkins via WSL IP, installing plugins, creating the admin user, and adding Python inside the Jenkins container.
+This branch introduces full **GitHub → Jenkins integration**, enabling automated pipeline execution directly from your GitHub repository.
+You will create a GitHub personal access token, add it to Jenkins, configure a Pipeline job, generate the checkout script, create the initial Jenkinsfile, and run your first successful build.
 
 ## 🧩 **What Was Added in This Branch**
 
-* `Dockerfile` in project root
-* `custom_jenkins/Dockerfile`
-* Jenkins DinD build + run instructions
-* Setup workflow using WSL + VS Code
-* Images demonstrating Unlock, Plugin Install, Admin Creation, Dashboard
+* GitHub personal access token setup
+* Jenkins credential configuration
+* New Jenkins Pipeline job
+* Checkout script generation using Pipeline Syntax
+* Initial Jenkinsfile added to the repository
+* First successful Jenkins pipeline run
 
 ## 🗂️ **Project Structure Update**
 
 ```text
 LLMOPS-MULTI-AI-AGENT/
-├── Dockerfile
+├── Jenkinsfile                       # NEW: Initial pipeline file for integration test
 ├── custom_jenkins/
-│   └── Dockerfile              # NEW: Jenkins DinD-enabled custom image
-│
+│   └── Dockerfile
 └── app/
-    ├── main.py
     ├── backend/
     ├── common/
     ├── config/
     ├── core/
-    └── frontend/
+    ├── frontend/
+    └── main.py
 ```
 
-Only the **custom Jenkins Dockerfile** is new in this branch.
+Only the Jenkinsfile is new in this branch.
 
-## 🚀 **1️⃣ Build the Jenkins DinD Image**
+## 1️⃣ Generate Your GitHub Personal Access Token
 
-Open a **new Ubuntu (WSL)** terminal inside VS Code.
+1. Go to GitHub
+2. Open: Settings → Developer Settings → Personal Access Tokens → Classic
+3. Click Generate New Token
+4. Enable the following permissions:
 
-Navigate to the custom_jenkins folder:
+   * repo
+   * repo_hook
+5. Generate the token
+6. Copy it immediately (GitHub will not show it again)
 
-```bash
-cd custom_jenkins
-```
+## 2️⃣ Add Your GitHub Token to Jenkins
 
-Build the Docker image:
+1. Open Jenkins Dashboard
+2. Manage Jenkins → Manage Credentials → Global
+3. Add Credentials
+4. Fill in:
 
-```bash
-docker build -t jenkins-dind .
-```
-
-Output:
-
-```
-[+] Building 63.9s (8/8) FINISHED docker:default
- => [internal] load build definition from Dockerfile                                                                     0.0s
- => [internal] load metadata for docker.io/jenkins/jenkins:lts                                                           0.9s
- => [internal] load .dockerignore                                                                                        0.0s
- => CACHED [1/4] FROM docker.io/jenkins/jenkins:lts                                                                      0.0s
- => [2/4] RUN apt-get update ...                                                                                        34.7s
- => [3/4] RUN groupadd ...                                                                                               0.4s
- => [4/4] RUN mkdir -p /var/lib/docker                                                                                   0.3s
- => exporting to image                                                                                                  27.4s
- => naming to docker.io/library/jenkins-dind:latest                                                                      0.0s
- => unpacking to docker.io/library/jenkins-dind:latest
-```
-
-## 🚀 **2️⃣ Run the Jenkins DinD Container**
-
-```bash
-docker run -d --name jenkins-dind \
-  --privileged \
-  -p 8080:8080 -p 50000:50000 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v jenkins_home:/var/jenkins_home \
-  jenkins-dind
-```
-
-Example output (container ID):
-
-```
-0671f2a573cafc964c591d347b2cdb1b3dbac21a63b414820d536af917be1ed7
-```
-
-Check if the container is running:
-
-```bash
-docker ps
-```
-
-Output:
-
-```
-CONTAINER ID   IMAGE          COMMAND                  CREATED              STATUS              PORTS                                                      NAMES
-0671f2a573ca   jenkins-dind   "/usr/bin/tini -- /u…"   About a minute ago   Up About a minute   0.0.0.0:8080->8080/tcp ...                                 jenkins-dind
-```
-
-## 🔑 **3️⃣ Retrieve Jenkins Initial Admin Password**
-
-```bash
-docker logs jenkins-dind
-```
-
-Output:
-
-```
-*************************************************************
-Jenkins initial setup is required...
-Please use the following password to proceed:
-d81300af6fe545baa08d2219c02748b3
-*************************************************************
-```
-
-Copy this password.
-
-## 🌐 **4️⃣ Find Your WSL IP Address**
-
-```bash
-ip addr show eth0 | grep inet
-```
-
-Output:
-
-```
-inet 172.26.206.195/20 brd 172.26.207.255 scope global eth0
-inet6 fe80::215:5dff:fe32:30a/64 scope link
-```
-
-Use this IP address to access Jenkins:
-
-```
-http://172.26.206.195:8080
-```
-
-## 🔓 **5️⃣ Unlock Jenkins**
+   * Username: your GitHub username
+   * Password: your GitHub token
+   * ID: github-token
+   * Description: github-token
+5. Save
 
 <p align="center">
-  <img src="img/jenkins/unlock_jenkins.png" width="100%">
+  <img src="img/github/github_cred.png" width="100%">
 </p>
 
-Enter the initial admin password you copied earlier.
+## 3️⃣ Create a Jenkins Pipeline Job
 
-## 🔌 **6️⃣ Install Suggested Plugins**
+1. Go to Jenkins Dashboard
+2. Click New Item
+3. Choose Pipeline
+4. Enter a name and click OK
 
 <p align="center">
-  <img src="img/jenkins/install_plugins.png" width="100%">
+  <img src="img/github/new_item.png" width="100%">
 </p>
 
-Select **Install suggested plugins**.
-
-## 👤 **7️⃣ Create the First Admin User**
+Scroll down and add your GitHub repo URL (from the green “<> Code” button):
 
 <p align="center">
-  <img src="img/jenkins/create_admin.png" width="100%">
+  <img src="img/github/pipeline_details.png" width="100%">
 </p>
 
-Then continue to the dashboard.
+Click Apply and Save.
 
-## 🏠 **8️⃣ Jenkins Dashboard**
+## 4️⃣ Generate Your Checkout Script
 
-<p align="center">
-  <img src="img/jenkins/jenkins_dashboard.png" width="100%">
-</p>
+Inside the Jenkins job:
 
-Your Jenkins controller is now running.
+1. Click Pipeline Syntax
+2. Under Step, select “checkout”
+3. Fill in:
 
-## 🐍 **9️⃣ Install Python Inside Jenkins Container**
+   * Repository URL
+   * Credentials → github-token
+4. Generate the Pipeline Script
+5. Copy the output
 
-Open a shell into the Jenkins container:
+This is the script Jenkins auto-generates for checking out your repo via Git.
 
-```bash
-docker exec -u root -it jenkins-dind bash
-```
+## 5️⃣ Create or Modify Your Jenkinsfile (VS Code)
 
-Inside the container:
+In your cloned repo:
 
-```bash
-apt update -y
-apt install -y python3
-python3 --version
-ln -s /usr/bin/python3 /usr/bin/python
-python --version
-apt install -y python3-pip
-exit
-```
+1. Open the Jenkinsfile in VS Code
+2. Keep only the **first stage** (“Checkout”)
+3. Comment out:
 
-Restart the container:
+   * The environment block
+   * Every other stage
+4. Keep the final two closing curly braces
+5. Paste the generated checkout script into lines 55–60 (your current placeholder)
 
-```bash
-docker restart jenkins-dind
-```
+This gives you the simplest possible pipeline:
+Just a GitHub checkout to confirm integration is working.
 
-Now log back into Jenkins via the browser.
+Commit and push the Jenkinsfile to GitHub.
 
-## ✅ **Summary**
+## 7️⃣ Run the Pipeline
 
-This branch introduces:
+1. Return to Jenkins
+2. Open your Pipeline job
+3. Click Build Now
+4. Wait for the run to complete
 
-* A full Docker-in-Docker Jenkins setup
-* A custom Jenkins image capable of running Docker builds
-* Step-by-step instructions with inputs, outputs, and images
-* Python installed inside Jenkins for pipeline scripting
-* A reproducible workflow for launching Jenkins inside WSL2
+## 8️⃣ Verify Success
 
-Your CI/CD foundation for the Multi-AI Agent project is now fully operational.
+A successful run will show:
+
+* A green checkmark / blue icon
+* A populated Workspace containing your GitHub repository files
+
+This confirms Jenkins can successfully authenticate with GitHub and clone your project.
+
+## ✅ Summary
+
+This branch establishes GitHub → Jenkins integration, including:
+
+* Personal access token creation
+* Secure credential storage
+* Jenkins Pipeline job setup
+* Jenkinsfile added to the repository
+* First successful build with GitHub checkout
+
+This lays the groundwork for full CI/CD automation such as SonarQube scans, Docker builds, ECR pushes, and ECS deployments in future branches.
