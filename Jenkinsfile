@@ -27,16 +27,16 @@ configured earlier, allowing full Docker build capability.
 pipeline {
     agent any
 
-    environment {
-        // SonarQube configuration
-        SONAR_PROJECT_KEY = 'LLMOPS'
-        SONAR_SCANNER_HOME = tool 'Sonarqube'
+    // environment {
+    //     // SonarQube configuration
+    //     SONAR_PROJECT_KEY = 'LLMOPS'
+    //     SONAR_SCANNER_HOME = tool 'Sonarqube'
 
-        // AWS settings
-        AWS_REGION = 'us-east-1'
-        ECR_REPO   = 'my-repo'
-        IMAGE_TAG  = 'latest'
-    }
+    //     // AWS settings
+    //     AWS_REGION = 'us-east-1'
+    //     ECR_REPO   = 'my-repo'
+    //     IMAGE_TAG  = 'latest'
+    // }
 
 
 // ======================================================================
