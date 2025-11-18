@@ -32,10 +32,10 @@ pipeline {
         SONAR_PROJECT_KEY = 'LLMOPS'
         SONAR_SCANNER_HOME = tool 'Sonarqube'
 
-    //     // AWS settings
-    //     AWS_REGION = 'us-east-1'
-    //     ECR_REPO   = 'my-repo'
-    //     IMAGE_TAG  = 'latest'
+        // AWS settings
+        AWS_REGION = 'eu-west-2'
+        ECR_REPO   = 'my-repo'
+        IMAGE_TAG  = 'latest'
     }
 
 
@@ -87,39 +87,39 @@ pipeline {
         }
 
 
-        // // --------------------------------------------------------------
-        // // Stage 3: Build + Push Docker Image to AWS ECR
-        // // --------------------------------------------------------------
-        // stage('Build and Push Docker Image to ECR') {
-        //     steps {
-        //         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-token']]) {
-        //             script {
+        // --------------------------------------------------------------
+        // Stage 3: Build + Push Docker Image to AWS ECR
+        // --------------------------------------------------------------
+        stage('Build and Push Docker Image to ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-token']]) {
+                    script {
 
-        //                 // Retrieve AWS account ID dynamically
-        //                 def accountId = sh(
-        //                     script: "aws sts get-caller-identity --query Account --output text",
-        //                     returnStdout: true
-        //                 ).trim()
+                        // Retrieve AWS account ID dynamically
+                        def accountId = sh(
+                            script: "aws sts get-caller-identity --query Account --output text",
+                            returnStdout: true
+                        ).trim()
 
-        //                 def ecrUrl = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+                        def ecrUrl = "${accountId}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
 
-        //                 sh """
-        //                 # Authenticate Docker to AWS ECR
-        //                 aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ecrUrl}
+                        sh """
+                        # Authenticate Docker to AWS ECR
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ecrUrl}
 
-        //                 # Build Docker image
-        //                 docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                        # Build Docker image
+                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
 
-        //                 # Tag the image for ECR
-        //                 docker tag ${ECR_REPO}:${IMAGE_TAG} ${ecrUrl}:${IMAGE_TAG}
+                        # Tag the image for ECR
+                        docker tag ${ECR_REPO}:${IMAGE_TAG} ${ecrUrl}:${IMAGE_TAG}
 
-        //                 # Push the image to AWS ECR
-        //                 docker push ${ecrUrl}:${IMAGE_TAG}
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
+                        # Push the image to AWS ECR
+                        docker push ${ecrUrl}:${IMAGE_TAG}
+                        """
+                    }
+                }
+            }
+        }
 
 
         // // --------------------------------------------------------------
